@@ -516,6 +516,14 @@ func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) 
 			}, nil
 		}
 	}
+	if channelType == channel.TypeCommandcodes {
+		if err := validateCommandCodesBaseURL(input.BaseURL); err != nil {
+			return &FetchModelsResult{
+				Models: []ModelIdentify{},
+				Error:  lo.ToPtr(err.Error()),
+			}, nil
+		}
+	}
 
 	modelsURL, authHeaders := f.prepareModelsEndpointWithVertexBinding(channelType, input.BaseURL, input.ProjectID, input.Region)
 
@@ -544,6 +552,9 @@ func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) 
 		httpClient = httpClient.WithProxy(proxyConfig)
 	}
 	if isCommandCodeChannelType(channelType) || codexChannel != nil || thirdPartyCodexCatalog {
+		httpClient = httpClient.WithRejectHTTPSDowngrade()
+	}
+	if channelType == channel.TypeCommandcodes {
 		httpClient = httpClient.WithRejectHTTPSDowngrade()
 	}
 
@@ -855,6 +866,8 @@ func (f *ModelFetcher) prepareModelsEndpointWithVertexBinding(channelType channe
 		}
 
 		return baseURL + "/v1/models", headers
+	case channelType == channel.TypeCommandcodes:
+		return commandCodesModelsURL(baseURL), headers
 	case channelType.IsAnthropicLike():
 		baseURL = strings.TrimSuffix(baseURL, "/anthropic")
 		baseURL = strings.TrimSuffix(baseURL, "/claude")

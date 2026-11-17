@@ -288,6 +288,12 @@ func TestCommandCodeQuotaChecker_SupportsChannel(t *testing.T) {
 		Type:        channel.TypeCommandcode,
 		Credentials: objects.ChannelCredentials{APIKey: `{"access_token":"oauth"}`, APIKeys: []string{"user_key"}},
 	}))
+	// The CLI-endpoint channel bills the same account through its API key.
+	require.True(t, checker.SupportsChannel(&ent.Channel{
+		Type:        channel.TypeCommandcodes,
+		Credentials: objects.ChannelCredentials{APIKeys: []string{"user_key"}},
+	}))
+	require.False(t, checker.SupportsChannel(&ent.Channel{Type: channel.TypeCommandcodes}))
 }
 
 func TestHasCommandCodeQuotaCredentials(t *testing.T) {

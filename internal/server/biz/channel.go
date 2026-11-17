@@ -579,6 +579,11 @@ func (svc *ChannelService) createChannel(ctx context.Context, input ent.CreateCh
 			return nil, err
 		}
 	}
+	if input.Type == channel.TypeCommandcodes {
+		if err := validateCommandCodesBaseURL(lo.FromPtr(input.BaseURL)); err != nil {
+			return nil, err
+		}
+	}
 
 	if err := NormalizeAPIKeyAutoDisableRules(input.Policies); err != nil {
 		return nil, err
@@ -984,6 +989,11 @@ func (svc *ChannelService) UpdateChannel(ctx context.Context, id int, input *ent
 	}
 	if isCommandCodeChannelType(effectiveType) {
 		if err := validateCommandCodeBaseURL(effectiveBaseURL); err != nil {
+			return nil, err
+		}
+	}
+	if effectiveType == channel.TypeCommandcodes {
+		if err := validateCommandCodesBaseURL(effectiveBaseURL); err != nil {
 			return nil, err
 		}
 	}

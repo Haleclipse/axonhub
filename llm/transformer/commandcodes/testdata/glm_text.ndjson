@@ -1,0 +1,8 @@
+{"type":"start"}
+{"type":"start-step","request":{},"warnings":[]}
+{"type":"text-start","id":"txt-0"}
+{"type":"text-delta","id":"txt-0","text":"pong"}
+{"type":"text-end","id":"txt-0"}
+{"type":"finish-step","finishReason":"stop","rawFinishReason":"stop","usage":{"inputTokens":29,"inputTokenDetails":{"noCacheTokens":29,"cacheReadTokens":0},"outputTokens":3,"outputTokenDetails":{"textTokens":3,"reasoningTokens":0},"totalTokens":32,"raw":{"prompt_tokens":29,"completion_tokens":3,"total_tokens":32,"prompt_tokens_details":{"cached_tokens":0},"completion_tokens_details":{"reasoning_tokens":0},"cost":8.5e-07,"runinfra":{"cost_microcents":85,"cached_input_tokens":0}},"reasoningTokens":0,"cachedInputTokens":0},"providerMetadata":{"runinfra":{}},"response":{"id":"chatcmpl-8776da86dcc1b8ed","timestamp":"2026-11-17T08:48:24.000Z","modelId":"glm-5-3-flash"}}
+{"type":"finish","finishReason":"stop","rawFinishReason":"stop","totalUsage":{"inputTokens":29,"inputTokenDetails":{"noCacheTokens":29,"cacheReadTokens":0},"outputTokens":3,"outputTokenDetails":{"textTokens":3,"reasoningTokens":0},"totalTokens":32,"reasoningTokens":0,"cachedInputTokens":0}}
+{"type":"provider-metadata","providerMetadata":{"runinfra":{}}}

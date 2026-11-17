@@ -345,6 +345,7 @@ var defaultEndpointsForChannelType = map[channel.Type][]objects.ChannelEndpoint{
 	},
 	channel.TypeCommandcode:          openAIChatOnlyDefaultEndpoints,
 	channel.TypeCommandcodeAnthropic: {{APIFormat: llm.APIFormatAnthropicMessage.String()}},
+	channel.TypeCommandcodes:         {{APIFormat: llm.APIFormatCommandCodeGenerate.String()}},
 	channel.TypeTypesafe: {
 		{APIFormat: llm.APIFormatTypeSafeSystemOne.String()},
 	},

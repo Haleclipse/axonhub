@@ -67,6 +67,9 @@ var attemptProtocolControls = map[llm.APIFormat]protocolControls{
 	llm.APIFormatSeedanceVideo:         modelControls,
 	llm.APIFormatZenmuxVideo:           modelControls,
 	llm.APIFormatModelScopeImage:       modelControls,
+	// commandcodes/request.go nests model and stream under params; top-level
+	// comparison cannot reach them, so the whole params object is held.
+	llm.APIFormatCommandCodeGenerate: {exact: []string{"params"}},
 	// AI SDK formats are inbound-only today. Routing controls remain host-owned
 	// if a future outbound uses these formats.
 	llm.APIFormatAiSDKText:       chatControls,

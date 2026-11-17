@@ -169,6 +169,7 @@
     "models.dialogs.association.conditions.formatOptions.jina/rerank": "Jina (Rerank)",
     "models.dialogs.association.conditions.formatOptions.jina/embeddings": "Jina (Embeddings)",
     "models.dialogs.association.conditions.formatOptions.ollama/chat": "Ollama (Chat)",
+    "models.dialogs.association.conditions.formatOptions.commandcode/generate": "Command Code（Generate）",
     "models.dialogs.association.conditions.formatOptions.seedance/video": "Seedance (Video)",
   "models.dialogs.association.ruleHints.channelModel": "使用渠道 {{channel}} 的 {{model}} 模型",
   "models.dialogs.association.ruleHints.channelRegex": "使用渠道 {{channel}} 匹配 {{pattern}} 的模型",

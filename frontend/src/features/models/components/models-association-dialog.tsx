@@ -61,6 +61,7 @@ const requestFormatConditionOptions = [
   'typesafe/systemone',
   'ollama/chat',
   'seedance/video',
+  'commandcode/generate',
 ] as const;
 
 const contentFeatureConditionFields = [

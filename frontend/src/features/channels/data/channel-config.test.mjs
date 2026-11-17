@@ -316,7 +316,7 @@ test('Command Code exposes OpenAI and Anthropic channel variants with shared bas
   );
   assert.match(
     systemQuotas,
-    /type:\s*'commandcode'\s*\|\s*'commandcode_anthropic';[\s\S]*quotaData: ProviderCommandCodeQuotaData/,
+    /type:\s*'commandcode'\s*\|\s*'commandcode_anthropic'\s*\|\s*'commandcodes';[\s\S]*quotaData: ProviderCommandCodeQuotaData/,
     'quota parsing should type Command Code channels with ProviderCommandCodeQuotaData'
   );
   assert.match(

@@ -326,6 +326,12 @@ export const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
     channelTypes: ['commandcode', 'commandcode_anthropic'],
   },
+  commandcodes: {
+    provider: 'commandcodes',
+    icon: CommandCodeIcon,
+    color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    channelTypes: ['commandcodes'],
+  },
 };
 
 const protocolConfigs: ProtocolConfigs = {

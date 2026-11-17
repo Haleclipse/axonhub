@@ -425,8 +425,12 @@ func (hc *HttpClient) DoStream(ctx context.Context, request *Request) (streams.S
 		contentType = "text/event-stream" // Default to SSE
 	}
 
-	// Try to get a registered decoder for the content type
-	decoderFactory, exists := GetDecoder(contentType)
+	// A request-level decoder wins over Content-Type negotiation.
+	decoderFactory, exists := request.StreamDecoder, request.StreamDecoder != nil
+	if !exists {
+		// Try to get a registered decoder for the content type
+		decoderFactory, exists = GetDecoder(contentType)
+	}
 	if !exists {
 		if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
 			decoderFactory, exists = GetDecoder(mediaType)

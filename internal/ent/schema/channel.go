@@ -109,6 +109,7 @@ func (Channel) Fields() []ent.Field {
 				"zenmux_video",
 				"commandcode",
 				"commandcode_anthropic",
+				"commandcodes",
 				"typesafe",
 				"cloudflare",
 			).

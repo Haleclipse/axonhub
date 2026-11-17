@@ -173,8 +173,8 @@ function isOpenaiType(t: string): t is 'openai' | 'openai_responses' {
   return t === 'openai' || t === 'openai_responses';
 }
 
-function isCommandCodeType(t: string): t is 'commandcode' | 'commandcode_anthropic' {
-  return t === 'commandcode' || t === 'commandcode_anthropic';
+function isCommandCodeType(t: string): t is 'commandcode' | 'commandcode_anthropic' | 'commandcodes' {
+  return t === 'commandcode' || t === 'commandcode_anthropic' || t === 'commandcodes';
 }
 
 function isOllamaType(t: string): t is 'ollama' | 'ollama_anthropic' {

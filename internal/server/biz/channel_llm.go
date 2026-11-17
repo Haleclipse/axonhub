@@ -822,6 +822,12 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel, apiKeyOve
 		}
 		httpClient = httpClient.WithRejectHTTPSDowngrade()
 	}
+	if c.Type == channel.TypeCommandcodes {
+		if err := validateCommandCodesBaseURL(c.BaseURL); err != nil {
+			return nil, err
+		}
+		httpClient = httpClient.WithRejectHTTPSDowngrade()
+	}
 	ch := buildChannel(c, httpClient)
 	// Attach the shared key-selection state for the strategies that remember the
 	// key in use (fixed / round_robin_success). Nil otherwise. The snapshot the
@@ -1429,6 +1435,15 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel, apiKeyOve
 			BaseURL:        c.BaseURL,
 			APIKeyProvider: apiKeyProvider,
 		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create outbound transformer: %w", err)
+		}
+
+		ch.Outbound = transformer
+
+		return ch, nil
+	case channel.TypeCommandcodes:
+		transformer, err := buildCommandCodesOutbound(ch, c.BaseURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create outbound transformer: %w", err)
 		}

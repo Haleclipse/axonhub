@@ -69,6 +69,7 @@ func TestProviderQuotaService_RegistryCoverageMatrix(t *testing.T) {
 		{"charm_hyper", channel.TypeOpenaiResponses, "https://hyper.charm.land"},
 		{"commandcode", channel.TypeCommandcode, ""},
 		{"commandcode", channel.TypeCommandcodeAnthropic, ""},
+		{"commandcode", channel.TypeCommandcodes, ""},
 		{"ollama", channel.TypeOllama, ""},
 		{"ollama", channel.TypeOllamaAnthropic, ""},
 	}

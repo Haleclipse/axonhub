@@ -954,7 +954,7 @@ export type ProviderQuotaChannel = {
       };
     }
   | {
-      type: 'commandcode' | 'commandcode_anthropic';
+      type: 'commandcode' | 'commandcode_anthropic' | 'commandcodes';
       quotaStatus: {
         quotaData: ProviderCommandCodeQuotaData;
       };
@@ -1265,10 +1265,11 @@ function parseChannelNode(node: QueryChannelNodeWithQuota): ProviderQuotaChannel
     };
   }
 
-  if (node.type === 'commandcode' || node.type === 'commandcode_anthropic') {
+  // commandcodes bills the same Command Code account, so it shares the quota payload.
+  if (node.type === 'commandcode' || node.type === 'commandcode_anthropic' || node.type === 'commandcodes') {
     return {
       ...base,
-      type: node.type as 'commandcode' | 'commandcode_anthropic',
+      type: node.type as 'commandcode' | 'commandcode_anthropic' | 'commandcodes',
       quotaStatus: { ...base.quotaStatus, quotaData: node.providerQuotaStatus.quotaData as ProviderCommandCodeQuotaData },
     };
   }

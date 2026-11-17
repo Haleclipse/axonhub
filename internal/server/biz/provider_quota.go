@@ -81,6 +81,7 @@ var providerQuotaChannelTypes = []channel.Type{
 	channel.TypeDeepseekAnthropic,
 	channel.TypeCommandcode,
 	channel.TypeCommandcodeAnthropic,
+	channel.TypeCommandcodes,
 	channel.TypeOllama,
 	channel.TypeOllamaAnthropic,
 }
@@ -1583,7 +1584,9 @@ func (svc *ProviderQuotaService) getProviderType(ch *ent.Channel) string {
 		return "zai"
 	case channel.TypeDeepseek, channel.TypeDeepseekAnthropic:
 		return "deepseek"
-	case channel.TypeCommandcode, channel.TypeCommandcodeAnthropic:
+	case channel.TypeCommandcode, channel.TypeCommandcodeAnthropic, channel.TypeCommandcodes:
+		// commandcodes serves inference from the CLI endpoint but bills the same
+		// Command Code account, so it shares the commandcode quota provider.
 		return "commandcode"
 	case channel.TypeOllama, channel.TypeOllamaAnthropic:
 		return "ollama"
@@ -1622,9 +1625,10 @@ func hasCredentialsForProvider(ch *ent.Channel) bool {
 		return false
 	}
 
-	if isCommandCodeChannelType(ch.Type) {
+	if isCommandCodeChannelType(ch.Type) || ch.Type == channel.TypeCommandcodes {
 		// Command Code quota collection authenticates with the account API key
 		// (/alpha/billing/*), or with the Studio session cookie as a fallback.
+		// commandcodes never stores the cookie, so it always uses the API key.
 		return provider_quota.HasCommandCodeQuotaCredentials(ch)
 	}
 

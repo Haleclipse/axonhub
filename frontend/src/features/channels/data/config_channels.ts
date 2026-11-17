@@ -927,6 +927,14 @@ export const CHANNEL_CONFIGS: Record<ChannelType, ChannelConfig> = {
     color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
     icon: CommandCodeIcon,
   },
+  commandcodes: {
+    channelType: 'commandcodes',
+    baseURL: 'https://api.commandcode.ai',
+    defaultModels: ['z-ai/glm-5.3-flash', 'deepseek/deepseek-v4.1-flash'],
+    apiFormat: 'commandcode/generate' as ApiFormat,
+    color: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+    icon: CommandCodeIcon,
+  },
 };
 
 /**
@@ -990,7 +998,8 @@ export type Provider =
   | 'evolink'
   | 'groq'
   | 'zenmux'
-  | 'commandcode';
+  | 'commandcode'
+  | 'commandcodes';
 
 /**
  * Map channel type to provider
@@ -1071,6 +1080,7 @@ export const CHANNEL_TYPE_TO_PROVIDER: Record<ChannelType, Provider> = {
   zenmux_video: 'zenmux',
   commandcode: 'commandcode',
   commandcode_anthropic: 'commandcode',
+  commandcodes: 'commandcodes',
 };
 
 /**

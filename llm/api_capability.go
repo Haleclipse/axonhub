@@ -14,6 +14,7 @@ func CapableAPIFormats(requestType RequestType) map[string]struct{} {
 			APIFormatAnthropicMessage.String():        {},
 			APIFormatGeminiContents.String():          {},
 			APIFormatOllamaChat.String():              {},
+			APIFormatCommandCodeGenerate.String():     {},
 		}
 	case RequestTypeCompact:
 		return map[string]struct{}{

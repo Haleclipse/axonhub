@@ -20,6 +20,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tmaxmax/go-sse"
+
+	"github.com/looplj/axonhub/llm/streams"
 )
 
 func TestHttpClientImpl_Do_DoesNotLogSecrets(t *testing.T) {
@@ -939,4 +941,32 @@ func TestBuildHttpRequest_UserAgentPassThrough(t *testing.T) {
 			require.Equal(t, tt.wantUserAgent, ua)
 		})
 	}
+}
+
+func TestHttpClientImpl_DoStream_RequestDecoderOverridesContentType(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		// A body whose framing does not match the declared Content-Type.
+		writer.Header().Set("Content-Type", "text/event-stream")
+		_, _ = writer.Write([]byte("line-1\nline-2\n"))
+	}))
+	t.Cleanup(server.Close)
+
+	var decodedBody string
+	stub := func(_ context.Context, rc io.ReadCloser) StreamDecoder {
+		data, err := io.ReadAll(rc)
+		require.NoError(t, err)
+		require.NoError(t, rc.Close())
+		decodedBody = string(data)
+
+		return streams.SliceStream([]*StreamEvent{{Data: data}})
+	}
+
+	client := NewHttpClientWithClient(server.Client())
+	stream, err := client.DoStream(t.Context(), &Request{Method: http.MethodPost, URL: server.URL, StreamDecoder: stub})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = stream.Close() })
+
+	require.True(t, stream.Next())
+	require.Equal(t, "line-1\nline-2\n", string(stream.Current().Data))
+	require.Equal(t, "line-1\nline-2\n", decodedBody)
 }

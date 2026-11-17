@@ -58,6 +58,11 @@ type Request struct {
 	// inbound request from being merged into this request during MergeInboundRequest.
 	SkipInboundQueryMerge bool                               `json:"-"`
 	OnResponseHeaders     func(context.Context, http.Header) `json:"-"`
+
+	// StreamDecoder, when set, decodes the streaming response body regardless of
+	// the response Content-Type. Use it for providers whose stream framing is fixed
+	// by protocol but whose declared Content-Type is wrong (e.g. NDJSON labeled text/event-stream).
+	StreamDecoder StreamDecoderFactory `json:"-"`
 }
 
 func (r *Request) ObserveResponseHeaders(ctx context.Context, headers http.Header) {

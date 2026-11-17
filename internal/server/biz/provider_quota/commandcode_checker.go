@@ -133,7 +133,7 @@ func NewCommandCodeQuotaChecker(httpClient *httpclient.HttpClient) *CommandCodeQ
 }
 
 func (c *CommandCodeQuotaChecker) SupportsChannel(ch *ent.Channel) bool {
-	if ch.Type != channel.TypeCommandcode && ch.Type != channel.TypeCommandcodeAnthropic {
+	if ch.Type != channel.TypeCommandcode && ch.Type != channel.TypeCommandcodeAnthropic && ch.Type != channel.TypeCommandcodes {
 		return false
 	}
 

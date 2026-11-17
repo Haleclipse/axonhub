@@ -90,6 +90,12 @@ const (
 	APIFormatSeedanceVideo APIFormat = "seedance/video"
 	APIFormatZenmuxVideo   APIFormat = "zenmux/video"
 
+	// APIFormatCommandCodeGenerate is Command Code's native /alpha/generate
+	// protocol: AI SDK model messages in, NDJSON AI SDK stream parts out. It is a
+	// provider-only default endpoint and is intentionally absent from the
+	// configurable format list.
+	APIFormatCommandCodeGenerate APIFormat = "commandcode/generate"
+
 	// APIFormatModelScopeImage is the ModelScope-native image protocol. ModelScope
 	// serves image generation and image editing on one async endpoint, so a single
 	// provider format covers both directions. It is a provider-only default
@@ -130,6 +136,7 @@ func AllAPIFormats() []APIFormat {
 		APIFormatSeedanceVideo,
 		APIFormatZenmuxVideo,
 		APIFormatModelScopeImage,
+		APIFormatCommandCodeGenerate,
 	}
 }
 

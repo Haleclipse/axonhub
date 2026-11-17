@@ -26,6 +26,7 @@ export const apiFormatSchema = z.enum([
   'jina/embeddings',
   'typesafe/systemone',
   'ollama/chat',
+  'commandcode/generate',
 ]);
 
 export type ApiFormat = z.infer<typeof apiFormatSchema>;
@@ -149,6 +150,7 @@ export const channelTypeSchema = z.enum([
   'zenmux_video',
   'commandcode',
   'commandcode_anthropic',
+  'commandcodes',
 ]);
 export type ChannelType = z.infer<typeof channelTypeSchema>;
 
