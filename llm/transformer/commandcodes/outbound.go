@@ -4,11 +4,13 @@
 //   llm/transformer/commandcodes/stream.go
 //   llm/transformer/commandcodes/aggregate.go
 //   llm/transformer/commandcodes/decoder.go
-//   internal/server/biz/channel_llm.go
+//   llm/transformer/commandcodes/thread.go
 // 注意事项:
 //   上游把 NDJSON 流标为 text/event-stream，按 Content-Type 会走 SSE 解码并丢弃全部事件，
 //   请求必须显式携带 NDJSON 解码器。
 //   x-command-code-version 不可省略，缺失时上游返回 403 upgrade_required。
+//   x-session-id 与请求体 threadId 取同一值，和官方 CLI 一致；客户端自带的 X-Session-Id 会在合并时覆盖它，
+//   因此在 FinalizeTransportRequest 中按请求体重新写回。
 //   非流式请求也走 DoStream，并在执行器内聚合成统一响应 JSON；原始 NDJSON 不是合法 JSON，
 //   不能作为响应体交给流水线落库。
 //   Accept 固定为 */*，与官方 CLI 一致，避免上游按 text/event-stream 协商出 SSE。
@@ -45,6 +47,7 @@ const (
 	CLIVersion = "1.89.2"
 
 	cliVersionHeader = "X-Command-Code-Version"
+	sessionIDHeader  = "X-Session-Id"
 )
 
 // Config holds the configuration for the Command Code generate transformer.
@@ -63,8 +66,9 @@ type OutboundTransformer struct {
 }
 
 var (
-	_ transformer.Outbound               = (*OutboundTransformer)(nil)
-	_ pipeline.ChannelCustomizedExecutor = (*OutboundTransformer)(nil)
+	_ transformer.Outbound                  = (*OutboundTransformer)(nil)
+	_ transformer.TransportRequestFinalizer = (*OutboundTransformer)(nil)
+	_ pipeline.ChannelCustomizedExecutor    = (*OutboundTransformer)(nil)
 )
 
 // NewOutboundTransformerWithConfig creates a Command Code generate transformer.
@@ -104,6 +108,8 @@ func (t *OutboundTransformer) TransformRequest(ctx context.Context, llmReq *llm.
 		return nil, err
 	}
 
+	payload.ThreadID = resolveThreadID(ctx, llmReq, &payload.Params)
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal Command Code generate request: %w", err)
@@ -113,6 +119,7 @@ func (t *OutboundTransformer) TransformRequest(ctx context.Context, llmReq *llm.
 	headers.Set("Content-Type", "application/json")
 	headers.Set("Accept", "*/*")
 	headers.Set(cliVersionHeader, CLIVersion)
+	headers.Set(sessionIDHeader, payload.ThreadID)
 
 	return &httpclient.Request{
 		Method:  http.MethodPost,
@@ -127,6 +134,27 @@ func (t *OutboundTransformer) TransformRequest(ctx context.Context, llmReq *llm.
 		APIFormat:     llm.APIFormatCommandCodeGenerate.String(),
 		StreamDecoder: newNDJSONDecoder,
 	}, nil
+}
+
+// FinalizeTransportRequest keeps x-session-id equal to the body threadId after
+// inbound client headers have been merged into the request.
+func (t *OutboundTransformer) FinalizeTransportRequest(request *httpclient.Request) *httpclient.Request {
+	if request == nil {
+		return nil
+	}
+
+	threadID := gjson.GetBytes(request.Body, "threadId").String()
+	if threadID == "" {
+		return request
+	}
+
+	if request.Headers == nil {
+		request.Headers = make(http.Header)
+	}
+
+	request.Headers.Set(sessionIDHeader, threadID)
+
+	return request
 }
 
 // TransformResponse decodes the unified response produced by generateExecutor.Do.

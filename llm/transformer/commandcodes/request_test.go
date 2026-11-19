@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/gjson"
@@ -20,6 +21,7 @@ import (
 	"github.com/looplj/axonhub/llm/auth"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/transformer"
+	"github.com/looplj/axonhub/llm/transformer/shared"
 )
 
 func newTestTransformer(t *testing.T, config *Config) *OutboundTransformer {
@@ -41,8 +43,10 @@ func newTestTransformer(t *testing.T, config *Config) *OutboundTransformer {
 
 func TestTransformRequest_MatchesCLIWireShape(t *testing.T) {
 	outbound := newTestTransformer(t, &Config{BaseURL: DefaultBaseURL})
+	ctx := shared.WithSessionID(context.Background(), "session-1")
+	wantThreadID := uuid.NewSHA1(threadNamespace, []byte("\x00session:session-1")).String()
 
-	req, err := outbound.TransformRequest(context.Background(), &llm.Request{
+	req, err := outbound.TransformRequest(ctx, &llm.Request{
 		Model:           "z-ai/glm-5.3-flash",
 		Stream:          lo.ToPtr(false),
 		MaxTokens:       lo.ToPtr(int64(4096)),
@@ -59,6 +63,7 @@ func TestTransformRequest_MatchesCLIWireShape(t *testing.T) {
 	require.Equal(t, "*/*", req.Headers.Get("Accept"))
 	require.Equal(t, "application/json", req.Headers.Get("Content-Type"))
 	require.Equal(t, CLIVersion, req.Headers.Get("x-command-code-version"))
+	require.Equal(t, wantThreadID, req.Headers.Get("x-session-id"))
 	require.Equal(t, httpclient.AuthTypeBearer, req.Auth.Type)
 	require.Equal(t, "sk-test", req.Auth.APIKey)
 	require.Equal(t, llm.APIFormatCommandCodeGenerate.String(), req.APIFormat)
@@ -66,6 +71,7 @@ func TestTransformRequest_MatchesCLIWireShape(t *testing.T) {
 	require.NotNil(t, req.StreamDecoder)
 
 	require.JSONEq(t, `{
+		"threadId": "`+wantThreadID+`",
 		"config": {
 			"workingDir": "/",
 			"date": "2026-11-03",

@@ -52,11 +52,13 @@ var supportedReasoningEfforts = map[string]struct{}{
 type generateRequest struct {
 	Config generateConfig `json:"config"`
 	// Memory, Taste and Skills are CLI-side features; the gateway always sends null.
-	Memory         any            `json:"memory"`
-	Taste          any            `json:"taste"`
-	Skills         any            `json:"skills"`
-	PermissionMode string         `json:"permissionMode"`
-	Params         generateParams `json:"params"`
+	Memory         any    `json:"memory"`
+	Taste          any    `json:"taste"`
+	Skills         any    `json:"skills"`
+	PermissionMode string `json:"permissionMode"`
+	// ThreadID groups a conversation's turns upstream; see thread.go.
+	ThreadID string         `json:"threadId,omitempty"`
+	Params   generateParams `json:"params"`
 }
 
 // generateConfig mirrors the CLI's buildServerConfig workspace snapshot. The
