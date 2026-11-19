@@ -52,18 +52,12 @@ func conversation(turns ...string) *llm.Request {
 	return req
 }
 
-func TestThreadID_SessionTakesPrecedenceAndIsStable(t *testing.T) {
-	ctx := shared.WithSessionID(context.Background(), "trace-123")
-
-	first := threadOf(t, ctx, conversation("hello"))
-	later := threadOf(t, ctx, conversation("hello", "again", "more"))
+// Responses requests without a trace source get a random gateway session ID
+// per request; the thread must not follow it, or every turn misses the cache.
+func TestThreadID_IgnoresPerRequestGatewaySessionIDs(t *testing.T) {
+	first := threadOf(t, shared.WithSessionID(context.Background(), "responses-"+uuid.NewString()), conversation("hello"))
+	later := threadOf(t, shared.WithSessionID(context.Background(), "responses-"+uuid.NewString()), conversation("hello", "again", "more"))
 	require.Equal(t, first, later)
-
-	withCacheKey := conversation("hello")
-	withCacheKey.PromptCacheKey = lo.ToPtr("cache-key")
-	require.Equal(t, first, threadOf(t, ctx, withCacheKey), "the gateway session wins over prompt_cache_key")
-
-	require.NotEqual(t, first, threadOf(t, shared.WithSessionID(context.Background(), "trace-456"), conversation("hello")))
 }
 
 func TestThreadID_ScopeIsolatesTenants(t *testing.T) {
@@ -106,4 +100,12 @@ func TestFinalizeTransportRequest_RestoresSessionHeader(t *testing.T) {
 
 	finalized := outbound.FinalizeTransportRequest(merged)
 	require.Equal(t, threadID, finalized.Headers.Get("x-session-id"))
+}
+
+func TestThreadID_IgnoresSystemCacheMarkers(t *testing.T) {
+	plain := conversation("hello")
+	marked := conversation("hello", "again")
+	marked.Messages[0].CacheControl = &llm.CacheControl{Type: "ephemeral"}
+
+	require.Equal(t, threadOf(t, context.Background(), plain), threadOf(t, context.Background(), marked))
 }

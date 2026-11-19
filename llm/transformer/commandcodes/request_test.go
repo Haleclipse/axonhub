@@ -21,7 +21,6 @@ import (
 	"github.com/looplj/axonhub/llm/auth"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/transformer"
-	"github.com/looplj/axonhub/llm/transformer/shared"
 )
 
 func newTestTransformer(t *testing.T, config *Config) *OutboundTransformer {
@@ -43,11 +42,11 @@ func newTestTransformer(t *testing.T, config *Config) *OutboundTransformer {
 
 func TestTransformRequest_MatchesCLIWireShape(t *testing.T) {
 	outbound := newTestTransformer(t, &Config{BaseURL: DefaultBaseURL})
-	ctx := shared.WithSessionID(context.Background(), "session-1")
-	wantThreadID := uuid.NewSHA1(threadNamespace, []byte("\x00session:session-1")).String()
+	wantThreadID := uuid.NewSHA1(threadNamespace, []byte("\x00prompt_cache_key:conv-1")).String()
 
-	req, err := outbound.TransformRequest(ctx, &llm.Request{
+	req, err := outbound.TransformRequest(context.Background(), &llm.Request{
 		Model:           "z-ai/glm-5.3-flash",
+		PromptCacheKey:  lo.ToPtr("conv-1"),
 		Stream:          lo.ToPtr(false),
 		MaxTokens:       lo.ToPtr(int64(4096)),
 		ReasoningEffort: "low",
