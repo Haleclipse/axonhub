@@ -743,6 +743,8 @@ func extractOutboundReasoningEffort(channelRequest httpclient.Request, format ll
 		path = "reasoning.effort"
 	case llm.APIFormatAnthropicMessage:
 		path = "output_config.effort"
+	case llm.APIFormatCommandCodeGenerate:
+		path = "params.reasoning_effort"
 	default:
 		return nil
 	}

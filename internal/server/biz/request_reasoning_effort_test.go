@@ -64,6 +64,12 @@ func TestExtractOutboundReasoningEffort(t *testing.T) {
 			want:   lo.ToPtr("max"),
 		},
 		{
+			name:   "command code generate effort",
+			format: llm.APIFormatCommandCodeGenerate,
+			body:   `{"config":{},"params":{"model":"deepseek/deepseek-v4.1-flash","reasoning_effort":"high"}}`,
+			want:   lo.ToPtr("high"),
+		},
+		{
 			name:   "missing effort",
 			format: llm.APIFormatOpenAIChatCompletion,
 			body:   `{"model":"gpt-4"}`,

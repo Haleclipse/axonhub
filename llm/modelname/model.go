@@ -87,6 +87,13 @@ func reportedModel(body []byte, format llm.APIFormat, eventType string, stream b
 		}
 	case llm.APIFormatGeminiContents, llm.APIFormatGeminiEmbedding:
 		return jsonModel(body, "modelVersion", "response.modelVersion")
+	case llm.APIFormatCommandCodeGenerate:
+		// Only the NDJSON finish-step part reports the provider model; the
+		// non-stream body is aggregated by the transformer and carries the
+		// requested model instead.
+		if stream && eventType == "finish-step" {
+			return jsonModel(body, "response.modelId")
+		}
 	case llm.APIFormatOpenAIChatCompletion, llm.APIFormatOpenAICompletion, llm.APIFormatOllamaChat:
 		// Cline wraps an OpenAI-compatible response in a success/data envelope.
 		if gjson.GetBytes(body, "success").Type == gjson.True {
