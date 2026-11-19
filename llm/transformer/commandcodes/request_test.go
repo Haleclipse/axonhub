@@ -172,6 +172,36 @@ func TestTransformRequest_ConvertsConversation(t *testing.T) {
 	]`, params.Get("tools").Raw)
 }
 
+func TestTransformRequest_LateSystemMessagesStayInPlace(t *testing.T) {
+	outbound := newTestTransformer(t, &Config{BaseURL: DefaultBaseURL})
+
+	req, err := outbound.TransformRequest(context.Background(), &llm.Request{
+		Model: "deepseek/deepseek-v4.1-flash",
+		Messages: []llm.Message{
+			{Role: "system", Content: llm.MessageContent{Content: lo.ToPtr("static system")}},
+			{Role: "developer", Content: llm.MessageContent{Content: lo.ToPtr("static developer")}},
+			{Role: "user", Content: llm.MessageContent{Content: lo.ToPtr("u1")}},
+			{Role: "system", Content: llm.MessageContent{Content: lo.ToPtr("reminder 1")}},
+			{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Type: "function", Function: llm.FunctionCall{Name: "read", Arguments: `{}`}}}},
+			{Role: "system", Content: llm.MessageContent{Content: lo.ToPtr("during tool")}},
+			{Role: "tool", ToolCallID: lo.ToPtr("c1"), Content: llm.MessageContent{Content: lo.ToPtr("result")}},
+			{Role: "user", Content: llm.MessageContent{Content: lo.ToPtr("u2")}},
+		},
+	})
+	require.NoError(t, err)
+
+	params := gjson.GetBytes(req.Body, "params")
+	require.Equal(t, "static system\n\nstatic developer", params.Get("system").String())
+	require.JSONEq(t, `[
+		{"role": "user", "content": [{"type": "text", "text": "u1"}]},
+		{"role": "user", "content": [{"type": "text", "text": "reminder 1"}]},
+		{"role": "assistant", "content": [{"type": "tool-call", "toolCallId": "c1", "toolName": "read", "input": {}}]},
+		{"role": "tool", "content": [{"type": "tool-result", "toolCallId": "c1", "toolName": "read", "output": {"type": "text", "value": "result"}}]},
+		{"role": "user", "content": [{"type": "text", "text": "during tool"}]},
+		{"role": "user", "content": [{"type": "text", "text": "u2"}]}
+	]`, params.Get("messages").Raw)
+}
+
 func TestTransformRequest_SystemCacheControlUsesBlocks(t *testing.T) {
 	outbound := newTestTransformer(t, &Config{BaseURL: DefaultBaseURL})
 

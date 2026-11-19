@@ -10,6 +10,9 @@
 //   上游始终以流式 NDJSON 响应，因此 params.stream 恒为 true；stream=false 会被上游当作代理请求拒绝。
 //   params.system 缺失或为空字符串时，上游会注入约 7k token 的 CLI 智能体提示，改变模型行为并增加计费；
 //   客户端没有 system 时必须发送非空的中性提示。仅含空白的 system 会被 Claude 拒绝，不能用空白占位。
+//   只有开头连续的 system/developer 消息进入 params.system。对话中途的 system 消息（Claude Code 会在工具执行、
+//   hook、提醒时追加）必须原地转为 user 消息，否则 system 前缀逐轮变化，缓存只能命中静态部分；
+//   落在 tool 调用与结果之间时延后到结果之后，避免上游因工具配对被打断而拒绝请求。
 //   config 对应 CLI 的 buildServerConfig；网关没有工作区，取值与 CLI 内存运行时的缺省（cwd "/"、platform "linux"）一致。
 
 package commandcodes
@@ -172,20 +175,25 @@ func buildGenerateRequest(req *llm.Request, now time.Time) (*generateRequest, er
 	}, nil
 }
 
-// convertMessages hoists system/developer messages into params.system and maps
-// the rest to AI SDK model messages. Consecutive tool results share one tool
-// message, matching how the CLI groups the tool_result blocks of a user turn.
+// convertMessages hoists the leading system/developer block into params.system
+// and maps the rest to AI SDK model messages. Consecutive tool results share
+// one tool message, matching how the CLI groups the tool_result blocks of a
+// user turn.
 func convertMessages(msgs []llm.Message) (any, []wireMessage, error) {
 	var (
 		systemBlocks    []wireSystemBlock
 		hasCacheControl bool
-		messages        = make([]wireMessage, 0, len(msgs))
-		toolNames       = make(map[string]string)
+		leading         = true
+		converter       = messageConverter{
+			messages:         make([]wireMessage, 0, len(msgs)),
+			toolNames:        make(map[string]string),
+			pendingToolCalls: make(map[string]struct{}),
+		}
 	)
 
 	for _, msg := range msgs {
-		switch msg.Role {
-		case "system", "developer":
+		isSystem := msg.Role == "system" || msg.Role == "developer"
+		if isSystem && leading {
 			text := joinText(msg.Content, "\n")
 			if strings.TrimSpace(text) == "" {
 				continue
@@ -194,33 +202,106 @@ func convertMessages(msgs []llm.Message) (any, []wireMessage, error) {
 			block := wireSystemBlock{Type: "text", Text: text, CacheControl: systemCacheControl(msg)}
 			hasCacheControl = hasCacheControl || block.CacheControl != nil
 			systemBlocks = append(systemBlocks, block)
-		case "user":
+
+			continue
+		}
+
+		leading = false
+
+		switch {
+		case isSystem:
+			converter.addLateSystem(msg)
+		case msg.Role == "user":
 			parts, err := convertUserContent(msg.Content)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			if len(parts) > 0 {
-				messages = append(messages, wireMessage{Role: "user", Content: parts})
+				converter.append(wireMessage{Role: "user", Content: parts})
 			}
-		case "assistant":
-			parts := convertAssistantMessage(msg, toolNames)
-			if len(parts) > 0 {
-				messages = append(messages, wireMessage{Role: "assistant", Content: parts})
-			}
-		case "tool":
-			part := convertToolResult(msg, toolNames)
-			if last := len(messages) - 1; last >= 0 && messages[last].Role == "tool" {
-				messages[last].Content = append(messages[last].Content, part)
-			} else {
-				messages = append(messages, wireMessage{Role: "tool", Content: []wirePart{part}})
-			}
+		case msg.Role == "assistant":
+			converter.addAssistant(msg)
+		case msg.Role == "tool":
+			converter.addToolResult(msg)
 		default:
 			return nil, nil, fmt.Errorf("%w: unsupported message role %q", transformer.ErrInvalidRequest, msg.Role)
 		}
 	}
 
-	return convertSystem(systemBlocks, hasCacheControl), messages, nil
+	converter.flushDeferred()
+
+	return convertSystem(systemBlocks, hasCacheControl), converter.messages, nil
+}
+
+// messageConverter keeps the state needed to place late system messages
+// in the conversation without splitting a tool call from its results.
+type messageConverter struct {
+	messages  []wireMessage
+	toolNames map[string]string
+	// pendingToolCalls are the latest assistant tool calls still waiting for results.
+	pendingToolCalls map[string]struct{}
+	// deferred holds late system text that arrived while tool results were pending.
+	deferred []wirePart
+}
+
+// append emits a user or assistant message after any deferred system text.
+func (c *messageConverter) append(message wireMessage) {
+	c.flushDeferred()
+	c.messages = append(c.messages, message)
+}
+
+// addLateSystem keeps a mid-conversation system message in place as user text.
+// Hoisting it into params.system would change the prompt prefix every time
+// the client adds one, leaving only the static system prompt cacheable.
+func (c *messageConverter) addLateSystem(msg llm.Message) {
+	text := joinText(msg.Content, "\n")
+	if strings.TrimSpace(text) == "" {
+		return
+	}
+
+	part := wirePart{Type: "text", Text: text}
+	if len(c.pendingToolCalls) > 0 {
+		// Providers reject anything between a tool call and its results.
+		c.deferred = append(c.deferred, part)
+		return
+	}
+
+	c.messages = append(c.messages, wireMessage{Role: "user", Content: []wirePart{part}})
+}
+
+func (c *messageConverter) addAssistant(msg llm.Message) {
+	parts := convertAssistantMessage(msg, c.toolNames)
+	if len(parts) > 0 {
+		c.append(wireMessage{Role: "assistant", Content: parts})
+	}
+
+	c.pendingToolCalls = make(map[string]struct{}, len(msg.ToolCalls))
+	for _, toolCall := range msg.ToolCalls {
+		c.pendingToolCalls[toolCall.ID] = struct{}{}
+	}
+}
+
+func (c *messageConverter) addToolResult(msg llm.Message) {
+	part := convertToolResult(msg, c.toolNames)
+	if last := len(c.messages) - 1; last >= 0 && c.messages[last].Role == "tool" {
+		c.messages[last].Content = append(c.messages[last].Content, part)
+	} else {
+		c.messages = append(c.messages, wireMessage{Role: "tool", Content: []wirePart{part}})
+	}
+
+	delete(c.pendingToolCalls, part.ToolCallID)
+	if len(c.pendingToolCalls) == 0 {
+		c.flushDeferred()
+	}
+}
+
+func (c *messageConverter) flushDeferred() {
+	for _, part := range c.deferred {
+		c.messages = append(c.messages, wireMessage{Role: "user", Content: []wirePart{part}})
+	}
+
+	c.deferred = nil
 }
 
 func convertSystem(blocks []wireSystemBlock, hasCacheControl bool) any {
